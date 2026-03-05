@@ -1,7 +1,6 @@
 export declare class Client {
-    private token;
     constructor(token: string);
-    on(event: string, callback: (...args: any[]) => void): void;
+    on(event: string, callback: (...args: unknown[]) => void): void;
     shutdown(): void;
 }
 //# sourceMappingURL=ExpoTwilioConversations.d.ts.map
