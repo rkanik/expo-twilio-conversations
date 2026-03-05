@@ -1,6 +1,4 @@
-export declare class Client {
-    constructor(token: string);
-    on(event: string, callback: (...args: unknown[]) => void): void;
-    shutdown(): void;
-}
+export declare const create: any;
+export declare const shutdown: any;
+export declare const addListener: any;
 //# sourceMappingURL=ExpoTwilioConversations.d.ts.map
