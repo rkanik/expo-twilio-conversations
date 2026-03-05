@@ -1,0 +1,26 @@
+{
+  "name": "expo-twilio-conversations",
+  "version": "1.0.0",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "build": "expo-module build",
+    "build:plugin": "expo-module build plugin",
+    "clean": "expo-module clean",
+    "test": "expo-module test",
+    "prepare": "expo-module prepare",
+    "prepublishOnly": "expo-module prepublishOnly"
+  },
+  "devDependencies": {
+    "expo": "^54.0.0",
+    "expo-module-scripts": "^55.0.2"
+  },
+  "peerDependencies": {
+    "expo": ">=54.0.0"
+  },
+  "peerDependenciesMeta": {
+    "expo": {
+      "optional": true
+    }
+  }
+}
