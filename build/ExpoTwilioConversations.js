@@ -1,6 +1,29 @@
 import { requireNativeModule } from "expo-modules-core";
-const Module = requireNativeModule("ExpoTwilioConversations");
-export const create = Module.create;
-export const shutdown = Module.shutdown;
-export const addListener = Module.addListener;
+const NativeModule = requireNativeModule("ExpoTwilioConversations");
+export const create = (token) => NativeModule.create(token);
+export const shutdown = () => {
+    NativeModule.removeAllListeners("onClient");
+    NativeModule.removeAllListeners("onTokenExpired");
+    NativeModule.removeAllListeners("onTokenAboutToExpire");
+    NativeModule.removeAllListeners("connectionStateChanged");
+    NativeModule.shutdown();
+};
+export const onClient = (callback) => {
+    return NativeModule.addListener("onClient", callback);
+};
+export const onTokenExpired = (callback) => {
+    return NativeModule.addListener("onTokenExpired", callback);
+};
+export const onTokenAboutToExpire = (callback) => {
+    return NativeModule.addListener("onTokenAboutToExpire", callback);
+};
+export const onConnectionStateChanged = (callback) => {
+    return NativeModule.addListener("onConnectionStateChanged", callback);
+};
+export const onNewMessageNotification = (callback) => {
+    return NativeModule.addListener("onNewMessageNotification", callback);
+};
+export const onError = (callback) => {
+    return NativeModule.addListener("onError", callback);
+};
 //# sourceMappingURL=ExpoTwilioConversations.js.map
