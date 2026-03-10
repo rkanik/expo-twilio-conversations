@@ -11,6 +11,9 @@ export const shutdown = () => {
 export const onClient = (callback) => {
     return NativeModule.addListener("onClient", callback);
 };
+export const onTest = (callback) => {
+    return NativeModule.addListener("onTest", callback);
+};
 export const onTokenExpired = (callback) => {
     return NativeModule.addListener("onTokenExpired", callback);
 };
@@ -22,6 +25,9 @@ export const onConnectionStateChanged = (callback) => {
 };
 export const onNewMessageNotification = (callback) => {
     return NativeModule.addListener("onNewMessageNotification", callback);
+};
+export const onMessageAdded = (callback) => {
+    return NativeModule.addListener("onMessageAdded", callback);
 };
 export const onError = (callback) => {
     return NativeModule.addListener("onError", callback);

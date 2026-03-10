@@ -3,7 +3,11 @@ package expo.modules.twilioconversations
 import android.os.Handler
 import android.os.Looper
 import com.twilio.conversations.CallbackListener
+import com.twilio.conversations.Conversation
+import com.twilio.conversations.ConversationListener
 import com.twilio.conversations.ConversationsClient
+import com.twilio.conversations.Message
+import com.twilio.conversations.Participant
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -19,8 +23,10 @@ class ExpoTwilioConversationsModule : Module() {
     Name("ExpoTwilioConversations")
 
     Events(
+            "onTest",
             "onError",
             "onClient",
+            "onMessageAdded",
             "onTokenExpired",
             "onTokenAboutToExpire",
             "onConnectionStateChanged",
@@ -48,6 +54,12 @@ class ExpoTwilioConversationsModule : Module() {
                     mainHandler.post {
                       sendEvent("onClient", mapOf<String, Any?>("client" to "client created"))
                     }
+
+                    val myIdentity = c.myIdentity
+                    mainHandler.post {
+                      sendEvent("onTest", mapOf<String, Any?>("myIdentity22" to myIdentity))
+                    }
+
                     val loader = c.javaClass.classLoader
                     val listenerInterface =
                             loader.loadClass("com.twilio.conversations.ConversationsClientListener")
@@ -57,7 +69,28 @@ class ExpoTwilioConversationsModule : Module() {
                                     method: Method,
                                     args: Array<out Any?>? ->
                               try {
+                                val module = this@ExpoTwilioConversationsModule
                                 when (method.name) {
+                                  "onClientSynchronization" -> {
+                                    if (args != null && args.isNotEmpty()) {
+                                      val status = args[0]?.toString()
+                                      if (status == "COMPLETED") {
+                                        try {
+                                          c.myConversations.forEach { conv ->
+                                            module.attachConversationListener(conv)
+                                          }
+                                        } catch (_: Exception) {}
+                                      }
+                                    }
+                                  }
+                                  "onConversationAdded" -> {
+                                    if (args != null && args.isNotEmpty()) {
+                                      val conv = args[0] as? Conversation
+                                      if (conv != null) {
+                                        module.attachConversationListener(conv)
+                                      }
+                                    }
+                                  }
                                   "onNewMessageNotification" ->
                                           mainHandler.post {
                                             sendEvent(
@@ -65,32 +98,17 @@ class ExpoTwilioConversationsModule : Module() {
                                                     mapOf<String, Any?>()
                                             )
                                           }
-
-                                  // if (args != null && args.size >= 3) {
-                                  //   val conversationSid = args[0] as? String
-                                  //   val messageSid = args[1] as? String
-                                  //   val messageIndex = (args[2] as? Long) ?: 0L
-                                  //   mainHandler.post {
-                                  //     sendEvent(
-                                  //             "onNewMessageNotification",
-                                  //             mapOf<String, Any?>(
-                                  //                     "conversationSid" to conversationSid,
-                                  //                     "messageSid" to messageSid,
-                                  //                     "index" to messageIndex
-                                  //             )
-                                  //     )
-                                  //   }
-                                  // }
-                                  "onConnectionStateChange" ->
-                                          if (args != null && args.isNotEmpty()) {
-                                            val state = args[0].toString()
-                                            mainHandler.post {
-                                              sendEvent(
-                                                      "onConnectionStateChanged",
-                                                      mapOf<String, Any?>("state" to state)
-                                              )
-                                            }
-                                          }
+                                  "onConnectionStateChange" -> {
+                                    if (args != null && args.isNotEmpty()) {
+                                      val state = args[0].toString()
+                                      mainHandler.post {
+                                        sendEvent(
+                                                "onConnectionStateChanged",
+                                                mapOf<String, Any?>("state" to state)
+                                        )
+                                      }
+                                    }
+                                  }
                                   "onTokenExpired" ->
                                           mainHandler.post {
                                             sendEvent("onTokenExpired", mapOf<String, Any?>())
@@ -170,5 +188,36 @@ class ExpoTwilioConversationsModule : Module() {
       client?.shutdown()
       client = null
     }
+  }
+
+  /**
+   * Attach a Twilio ConversationListener that forwards onMessageAdded to JS as "onMessageAdded".
+   */
+  private fun attachConversationListener(conversation: Conversation) {
+    conversation.addListener(
+            object : ConversationListener {
+              override fun onMessageAdded(message: Message) {
+                mainHandler.post {
+                  sendEvent(
+                          "onMessageAdded",
+                          mapOf<String, Any?>(
+                                  "body" to message.body,
+                          )
+                  )
+                }
+              }
+              override fun onMessageDeleted(message: Message) {}
+              override fun onMessageUpdated(message: Message, reason: Message.UpdateReason) {}
+              override fun onParticipantAdded(participant: Participant) {}
+              override fun onParticipantDeleted(participant: Participant) {}
+              override fun onParticipantUpdated(
+                      participant: Participant,
+                      reason: Participant.UpdateReason
+              ) {}
+              override fun onSynchronizationChanged(conversation: Conversation) {}
+              override fun onTypingStarted(conversation: Conversation, participant: Participant) {}
+              override fun onTypingEnded(conversation: Conversation, participant: Participant) {}
+            }
+    )
   }
 }
