@@ -18,6 +18,7 @@ class ExpoTwilioConversationsModule : Module() {
 
   private var client: ConversationsClient? = null
   private val mainHandler = Handler(Looper.getMainLooper())
+  private val conversationListenersAttached = mutableSetOf<String>()
 
   override fun definition() = ModuleDefinition {
     Name("ExpoTwilioConversations")
@@ -34,6 +35,11 @@ class ExpoTwilioConversationsModule : Module() {
     )
 
     AsyncFunction("create") { token: String, promise: Promise ->
+      if (client != null) {
+        promise.resolve(null)
+        return@AsyncFunction
+      }
+
       val ctx =
               appContext.reactContext?.applicationContext
                       ?: run {
@@ -180,11 +186,13 @@ class ExpoTwilioConversationsModule : Module() {
     }
 
     Function("shutdown") {
+      conversationListenersAttached.clear()
       client?.shutdown()
       client = null
     }
 
     OnDestroy {
+      conversationListenersAttached.clear()
       client?.shutdown()
       client = null
     }
@@ -192,8 +200,14 @@ class ExpoTwilioConversationsModule : Module() {
 
   /**
    * Attach a Twilio ConversationListener that forwards onMessageAdded to JS as "onMessageAdded".
+   * Each conversation is only bound once; duplicate calls are no-ops.
    */
   private fun attachConversationListener(conversation: Conversation) {
+    val sid = conversation.sid ?: return
+    synchronized(conversationListenersAttached) {
+      if (sid in conversationListenersAttached) return
+      conversationListenersAttached.add(sid)
+    }
     conversation.addListener(
             object : ConversationListener {
               override fun onMessageAdded(message: Message) {

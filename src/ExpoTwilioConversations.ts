@@ -4,10 +4,6 @@ const NativeModule = requireNativeModule("ExpoTwilioConversations");
 
 export const create = (token: string) => NativeModule.create(token);
 export const shutdown = () => {
-  NativeModule.removeAllListeners("onClient");
-  NativeModule.removeAllListeners("onTokenExpired");
-  NativeModule.removeAllListeners("onTokenAboutToExpire");
-  NativeModule.removeAllListeners("connectionStateChanged");
   NativeModule.shutdown();
 };
 
