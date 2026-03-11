@@ -1,31 +1,61 @@
 import { requireNativeModule } from "expo-modules-core";
 const NativeModule = requireNativeModule("ExpoTwilioConversations");
-export const create = (token) => NativeModule.create(token);
-export const shutdown = () => {
-    NativeModule.shutdown();
-};
-export const onClient = (callback) => {
-    return NativeModule.addListener("onClient", callback);
-};
-export const onTest = (callback) => {
-    return NativeModule.addListener("onTest", callback);
-};
-export const onTokenExpired = (callback) => {
-    return NativeModule.addListener("onTokenExpired", callback);
-};
-export const onTokenAboutToExpire = (callback) => {
-    return NativeModule.addListener("onTokenAboutToExpire", callback);
-};
-export const onConnectionStateChanged = (callback) => {
-    return NativeModule.addListener("onConnectionStateChanged", callback);
-};
-export const onNewMessageNotification = (callback) => {
-    return NativeModule.addListener("onNewMessageNotification", callback);
-};
-export const onMessageAdded = (callback) => {
-    return NativeModule.addListener("onMessageAdded", callback);
-};
-export const onError = (callback) => {
-    return NativeModule.addListener("onError", callback);
-};
+export class Client {
+    listeners = [];
+    constructor(token) {
+        NativeModule.create(token);
+    }
+    onTest(callback) {
+        const listener = NativeModule.addListener("onTest", callback);
+        this.listeners.push(listener);
+        return listener;
+    }
+    onClientSynchronization(callback) {
+        const listener = NativeModule.addListener("onClientSynchronization", callback);
+        this.listeners.push(listener);
+        return listener;
+    }
+    onConnectionStateChanged(callback) {
+        const listener = NativeModule.addListener("onConnectionStateChanged", callback);
+        this.listeners.push(listener);
+        return listener;
+    }
+    onTokenExpired(callback) {
+        const listener = NativeModule.addListener("onTokenExpired", callback);
+        this.listeners.push(listener);
+        return listener;
+    }
+    onTokenAboutToExpire(callback) {
+        const listener = NativeModule.addListener("onTokenAboutToExpire", callback);
+        this.listeners.push(listener);
+        return listener;
+    }
+    onTypingStarted(callback) {
+        const listener = NativeModule.addListener("onTypingStarted", callback);
+        this.listeners.push(listener);
+        return listener;
+    }
+    onTypingEnded(callback) {
+        const listener = NativeModule.addListener("onTypingEnded", callback);
+        this.listeners.push(listener);
+        return listener;
+    }
+    onMessageAdded(callback) {
+        const listener = NativeModule.addListener("onMessageAdded", callback);
+        this.listeners.push(listener);
+        return listener;
+    }
+    async getConversationBySid(sid) {
+        return {
+            typing() {
+                NativeModule.typing(sid);
+            },
+        };
+    }
+    shutdown() {
+        this.listeners.forEach((listener) => listener.remove());
+        this.listeners = [];
+        NativeModule.shutdown();
+    }
+}
 //# sourceMappingURL=ExpoTwilioConversations.js.map

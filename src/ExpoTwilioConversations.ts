@@ -2,39 +2,97 @@ import { requireNativeModule } from "expo-modules-core";
 
 const NativeModule = requireNativeModule("ExpoTwilioConversations");
 
-export const create = (token: string) => NativeModule.create(token);
-export const shutdown = () => {
-  NativeModule.shutdown();
+export type Message = {
+  body: string;
 };
 
-export const onClient = (callback: (data: any) => void) => {
-  return NativeModule.addListener("onClient", callback);
+export type Participant = {
+  sid: string;
+  identity: string;
+  attributes: string;
+  conversation_sid: string;
 };
 
-export const onTest = (callback: (data: any) => void) => {
-  return NativeModule.addListener("onTest", callback);
+export type Conversation = {
+  typing: () => void;
 };
 
-export const onTokenExpired = (callback: (data: any) => void) => {
-  return NativeModule.addListener("onTokenExpired", callback);
-};
+export class Client {
+  private listeners: any[] = [];
 
-export const onTokenAboutToExpire = (callback: (data: any) => void) => {
-  return NativeModule.addListener("onTokenAboutToExpire", callback);
-};
+  constructor(token: string) {
+    NativeModule.create(token);
+  }
 
-export const onConnectionStateChanged = (callback: (data: any) => void) => {
-  return NativeModule.addListener("onConnectionStateChanged", callback);
-};
+  public onTest(callback: (data: any) => void) {
+    const listener = NativeModule.addListener("onTest", callback);
+    this.listeners.push(listener);
+    return listener;
+  }
 
-export const onNewMessageNotification = (callback: (data: any) => void) => {
-  return NativeModule.addListener("onNewMessageNotification", callback);
-};
+  public onClientSynchronization(
+    callback: (event: { status: string }) => void
+  ) {
+    const listener = NativeModule.addListener(
+      "onClientSynchronization",
+      callback
+    );
+    this.listeners.push(listener);
+    return listener;
+  }
 
-export const onMessageAdded = (callback: (data: any) => void) => {
-  return NativeModule.addListener("onMessageAdded", callback);
-};
+  public onConnectionStateChanged(
+    callback: (event: { state: string }) => void
+  ) {
+    const listener = NativeModule.addListener(
+      "onConnectionStateChanged",
+      callback
+    );
+    this.listeners.push(listener);
+    return listener;
+  }
 
-export const onError = (callback: (data: any) => void) => {
-  return NativeModule.addListener("onError", callback);
-};
+  public onTokenExpired(callback: (message: string) => void) {
+    const listener = NativeModule.addListener("onTokenExpired", callback);
+    this.listeners.push(listener);
+    return listener;
+  }
+
+  public onTokenAboutToExpire(callback: (message: string) => void) {
+    const listener = NativeModule.addListener("onTokenAboutToExpire", callback);
+    this.listeners.push(listener);
+    return listener;
+  }
+
+  public onTypingStarted(callback: (participant: Participant) => void) {
+    const listener = NativeModule.addListener("onTypingStarted", callback);
+    this.listeners.push(listener);
+    return listener;
+  }
+
+  public onTypingEnded(callback: (participant: Participant) => void) {
+    const listener = NativeModule.addListener("onTypingEnded", callback);
+    this.listeners.push(listener);
+    return listener;
+  }
+
+  public onMessageAdded(callback: (message: Message) => void) {
+    const listener = NativeModule.addListener("onMessageAdded", callback);
+    this.listeners.push(listener);
+    return listener;
+  }
+
+  public async getConversationBySid(sid: string): Promise<Conversation> {
+    return {
+      typing() {
+        NativeModule.typing(sid);
+      },
+    };
+  }
+
+  public shutdown() {
+    this.listeners.forEach((listener) => listener.remove());
+    this.listeners = [];
+    NativeModule.shutdown();
+  }
+}
