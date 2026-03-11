@@ -2,5 +2,8 @@
   "platforms": ["android", "apple"],
   "android": {
     "modules": ["expo.modules.twilioconversations.ExpoTwilioConversationsModule"]
+  },
+  "apple": {
+    "modules": ["ExpoTwilioConversations"]
   }
 }
