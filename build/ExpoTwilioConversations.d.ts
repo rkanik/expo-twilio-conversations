@@ -1,15 +1,4 @@
-export type Message = {
-    body: string;
-};
-export type Participant = {
-    sid: string;
-    identity: string;
-    attributes: string;
-    conversation_sid: string;
-};
-export type Conversation = {
-    typing: () => void;
-};
+import { Conversation, Message, Participant } from "./types";
 export declare class Client {
     private listeners;
     constructor(token: string);

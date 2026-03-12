@@ -1,1 +1,1 @@
-{"version":3,"file":"types.js","sourceRoot":"","sources":["../src/types.ts"],"names":[],"mappings":"","sourcesContent":[""]}
+{"version":3,"file":"types.js","sourceRoot":"","sources":["../src/types.ts"],"names":[],"mappings":"","sourcesContent":["export type Message = {\n  body: string;\n};\n\nexport type Participant = {\n  sid: string;\n  identity: string;\n  attributes: string;\n  conversation_sid: string;\n};\n\nexport type Conversation = {\n  typing: () => void;\n};\n"]}

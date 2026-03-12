@@ -1,21 +1,7 @@
 import { requireNativeModule } from "expo-modules-core";
+import { Conversation, Message, Participant } from "./types";
 
 const NativeModule = requireNativeModule("ExpoTwilioConversations");
-
-export type Message = {
-  body: string;
-};
-
-export type Participant = {
-  sid: string;
-  identity: string;
-  attributes: string;
-  conversation_sid: string;
-};
-
-export type Conversation = {
-  typing: () => void;
-};
 
 export class Client {
   private listeners: any[] = [];

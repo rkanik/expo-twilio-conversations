@@ -1,7 +1,9 @@
 {
-  "platforms": ["android", "apple"],
+  "platforms": ["android", "apple", "web"],
   "android": {
-    "modules": ["expo.modules.twilioconversations.ExpoTwilioConversationsModule"]
+    "modules": [
+      "expo.modules.twilioconversations.ExpoTwilioConversationsModule"
+    ]
   },
   "apple": {
     "modules": ["ExpoTwilioConversations"]

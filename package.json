@@ -23,5 +23,8 @@
     "expo": {
       "optional": true
     }
+  },
+  "dependencies": {
+    "@twilio/conversations": "^2.7.0"
   }
 }
