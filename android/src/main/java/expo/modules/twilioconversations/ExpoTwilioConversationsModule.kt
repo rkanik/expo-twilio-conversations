@@ -133,7 +133,12 @@ class ExpoTwilioConversationsModule : Module() {
     }
 
     AsyncFunction("typing") { sid: String, promise: Promise ->
-      client?.getConversation(
+      val c = client
+      if (c == null) {
+        promise.reject("E_NO_CLIENT", "Conversations client not initialized", null)
+        return@AsyncFunction
+      }
+      c.getConversation(
               sid,
               object : CallbackListener<Conversation> {
                 override fun onSuccess(conversation: Conversation) {
@@ -145,7 +150,6 @@ class ExpoTwilioConversationsModule : Module() {
                 }
               }
       )
-      promise.resolve(null)
     }
 
     Function("shutdown") { shutdown() }
