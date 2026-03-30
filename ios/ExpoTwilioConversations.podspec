@@ -14,7 +14,7 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => "13.0" }
 
   s.source       = { :git => "https://github.com/rkanik/expo-twilio-conversations.git", :tag => "v#{s.version}" }
-  s.source_files = "ios/**/*.{h,m,mm,swift}"
+  s.source_files = "**/*.{h,m,mm,swift}"
 
   s.dependency "ExpoModulesCore"
   s.dependency "TwilioConversationsClient", "~> 3.1"

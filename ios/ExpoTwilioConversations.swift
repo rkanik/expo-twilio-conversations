@@ -1,8 +1,9 @@
 import ExpoModulesCore
 import TwilioConversationsClient
 
-public class ExpoTwilioConversationsModule: Module, TwilioConversationsClientDelegate {
+public class ExpoTwilioConversations: Module {
   private var client: TwilioConversationsClient?
+  private var clientDelegate: ClientDelegate?
 
   public func definition() -> ModuleDefinition {
     Name("ExpoTwilioConversations")
@@ -25,16 +26,19 @@ public class ExpoTwilioConversationsModule: Module, TwilioConversationsClientDel
       }
 
       let properties = TwilioConversationsClientProperties()
+      let delegate = ClientDelegate(owner: self)
+      self.clientDelegate = delegate
 
       TwilioConversationsClient.conversationsClient(
         withToken: token,
         properties: properties,
-        delegate: self
+        delegate: delegate
       ) { result, client in
         guard let client = client, result.isSuccessful else {
           let message = result.error?.localizedDescription ?? "Failed to create TwilioConversationsClient"
+          self.clientDelegate = nil
           self.onTest("create failed: \(message)")
-          promise.reject("E_CREATE_FAILED", message, nil)
+          promise.reject("E_CREATE_FAILED", message)
           return
         }
 
@@ -45,14 +49,14 @@ public class ExpoTwilioConversationsModule: Module, TwilioConversationsClientDel
 
     AsyncFunction("typing") { (sid: String, promise: Promise) in
       guard let client = self.client else {
-        promise.reject("E_NO_CLIENT", "Twilio client is not initialized", nil)
+        promise.reject("E_NO_CLIENT", "Twilio client is not initialized")
         return
       }
 
       client.conversation(withSidOrUniqueName: sid) { result, conversation in
         guard let conversation = conversation, result.isSuccessful else {
           let message = result.error?.localizedDescription ?? "Failed to get conversation"
-          promise.reject("E_TYPING_FAILED", message, nil)
+          promise.reject("E_TYPING_FAILED", message)
           return
         }
 
@@ -107,23 +111,7 @@ public class ExpoTwilioConversationsModule: Module, TwilioConversationsClientDel
   }
 
   private func onTypingStartedEvent(conversation: TCHConversation, participant: TCHParticipant) {
-    let attributes = participant.attributes
-    let attributesString: String?
-    if let string = attributes?.string {
-      attributesString = string
-    } else if let dict = attributes?.dictionary,
-              let data = try? JSONSerialization.data(withJSONObject: dict, options: []),
-              let json = String(data: data, encoding: .utf8) {
-      attributesString = json
-    } else if let array = attributes?.array,
-              let data = try? JSONSerialization.data(withJSONObject: array, options: []),
-              let json = String(data: data, encoding: .utf8) {
-      attributesString = json
-    } else if let number = attributes?.number {
-      attributesString = number.stringValue
-    } else {
-      attributesString = nil
-    }
+    let attributesString = Self.encodedParticipantAttributesString(participant)
 
     self.sendEvent("onTypingStarted", [
       "sid": participant.sid as Any,
@@ -134,23 +122,7 @@ public class ExpoTwilioConversationsModule: Module, TwilioConversationsClientDel
   }
 
   private func onTypingEndedEvent(conversation: TCHConversation, participant: TCHParticipant) {
-    let attributes = participant.attributes
-    let attributesString: String?
-    if let string = attributes?.string {
-      attributesString = string
-    } else if let dict = attributes?.dictionary,
-              let data = try? JSONSerialization.data(withJSONObject: dict, options: []),
-              let json = String(data: data, encoding: .utf8) {
-      attributesString = json
-    } else if let array = attributes?.array,
-              let data = try? JSONSerialization.data(withJSONObject: array, options: []),
-              let json = String(data: data, encoding: .utf8) {
-      attributesString = json
-    } else if let number = attributes?.number {
-      attributesString = number.stringValue
-    } else {
-      attributesString = nil
-    }
+    let attributesString = Self.encodedParticipantAttributesString(participant)
 
     self.sendEvent("onTypingEnded", [
       "sid": participant.sid as Any,
@@ -163,88 +135,117 @@ public class ExpoTwilioConversationsModule: Module, TwilioConversationsClientDel
   private func shutdown() {
     client?.shutdown()
     client = nil
+    clientDelegate = nil
   }
 
-  // MARK: - TwilioConversationsClientDelegate
+  private static func encodedParticipantAttributesString(_ participant: TCHParticipant) -> String? {
+    guard let attributes = participant.attributes() else { return nil }
+    if let string = attributes.string {
+      return string
+    }
+    if let dict = attributes.dictionary,
+       let data = try? JSONSerialization.data(withJSONObject: dict, options: []),
+       let json = String(data: data, encoding: .utf8) {
+      return json
+    }
+    if let array = attributes.array,
+       let data = try? JSONSerialization.data(withJSONObject: array, options: []),
+       let json = String(data: data, encoding: .utf8) {
+      return json
+    }
+    if let number = attributes.number {
+      return number.stringValue
+    }
+    return nil
+  }
 
-  public func conversationsClient(
-    _ client: TwilioConversationsClient,
-    synchronizationStatusUpdated status: TCHClientSynchronizationStatus
-  ) {
-    let statusString: String
-    switch status {
-    case .none:
-      statusString = "NONE"
-    case .started:
-      statusString = "STARTED"
-    case .failed:
-      statusString = "FAILED"
-    case .completed:
-      statusString = "COMPLETED"
-    @unknown default:
-      statusString = "UNKNOWN"
+  private final class ClientDelegate: NSObject, TwilioConversationsClientDelegate {
+    weak var owner: ExpoTwilioConversations?
+
+    init(owner: ExpoTwilioConversations) {
+      self.owner = owner
+      super.init()
     }
 
-    onClientSynchronization(statusString)
-  }
+    func conversationsClient(
+      _ client: TwilioConversationsClient,
+      synchronizationStatusUpdated status: TCHClientSynchronizationStatus
+    ) {
+      let statusString: String
+      switch status {
+      case .started:
+        statusString = "STARTED"
+      case .conversationsListCompleted:
+        statusString = "CONVERSATIONS_LIST_COMPLETED"
+      case .completed:
+        statusString = "COMPLETED"
+      case .failed:
+        statusString = "FAILED"
+      @unknown default:
+        statusString = "UNKNOWN"
+      }
 
-  public func conversationsClient(
-    _ client: TwilioConversationsClient,
-    connectionStateUpdated state: TCHClientConnectionState
-  ) {
-    let stateString: String
-    switch state {
-    case .unknown:
-      stateString = "UNKNOWN"
-    case .disconnected:
-      stateString = "DISCONNECTED"
-    case .connected:
-      stateString = "CONNECTED"
-    case .connecting:
-      stateString = "CONNECTING"
-    case .denied:
-      stateString = "DENIED"
-    case .error:
-      stateString = "ERROR"
-    case .fatalError:
-      stateString = "FATAL_ERROR"
-    @unknown default:
-      stateString = "UNKNOWN"
+      owner?.onClientSynchronization(statusString)
     }
 
-    onConnectionStateChange(stateString)
-  }
+    func conversationsClient(
+      _ client: TwilioConversationsClient,
+      connectionStateUpdated state: TCHClientConnectionState
+    ) {
+      let stateString: String
+      switch state {
+      case .unknown:
+        stateString = "UNKNOWN"
+      case .disconnected:
+        stateString = "DISCONNECTED"
+      case .connected:
+        stateString = "CONNECTED"
+      case .connecting:
+        stateString = "CONNECTING"
+      case .denied:
+        stateString = "DENIED"
+      case .error:
+        stateString = "ERROR"
+      case .fatalError:
+        stateString = "FATAL_ERROR"
+      @unknown default:
+        stateString = "UNKNOWN"
+      }
 
-  public func conversationsClientTokenExpired(_ client: TwilioConversationsClient) {
-    onTokenExpiredEvent()
-  }
+      owner?.onConnectionStateChange(stateString)
+    }
 
-  public func conversationsClientTokenWillExpire(_ client: TwilioConversationsClient) {
-    onTokenAboutToExpireEvent()
-  }
+    func conversationsClientTokenExpired(_ client: TwilioConversationsClient) {
+      owner?.onTokenExpiredEvent()
+    }
 
-  public func conversationsClient(
-    _ client: TwilioConversationsClient,
-    conversation: TCHConversation,
-    messageAdded message: TCHMessage
-  ) {
-    onMessageAddedEvent(message)
-  }
+    func conversationsClientTokenWillExpire(_ client: TwilioConversationsClient) {
+      owner?.onTokenAboutToExpireEvent()
+    }
 
-  public func conversationsClient(
-    _ client: TwilioConversationsClient,
-    typingStartedOn conversation: TCHConversation,
-    participant: TCHParticipant
-  ) {
-    onTypingStartedEvent(conversation: conversation, participant: participant)
-  }
+    func conversationsClient(
+      _ client: TwilioConversationsClient,
+      conversation: TCHConversation,
+      messageAdded message: TCHMessage
+    ) {
+      owner?.onMessageAddedEvent(message)
+    }
 
-  public func conversationsClient(
-    _ client: TwilioConversationsClient,
-    typingEndedOn conversation: TCHConversation,
-    participant: TCHParticipant
-  ) {
-    onTypingEndedEvent(conversation: conversation, participant: participant)
+    func conversationsClient(
+      _ client: TwilioConversationsClient,
+      typingStartedOn conversation: TCHConversation,
+      participant: TCHParticipant
+    ) {
+      owner?.onTypingStartedEvent(conversation: conversation, participant: participant)
+    }
+
+    func conversationsClient(
+      _ client: TwilioConversationsClient,
+      typingEndedOn conversation: TCHConversation,
+      participant: TCHParticipant
+    ) {
+      owner?.onTypingEndedEvent(conversation: conversation, participant: participant)
+    }
   }
 }
 
