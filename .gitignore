@@ -3,3 +3,4 @@ android/build
 android/.idea
 android/.gradle
 android/local.properties
+config.bat
